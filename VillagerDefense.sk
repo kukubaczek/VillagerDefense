@@ -1,0 +1,460 @@
+#------------------------------#
+#                              #
+#      Villager Defense        #
+#           v. 0.1             #
+#                              #
+#------------------------------#
+
+#------------------------------#
+#		   Kongiguracja		   #
+#------------------------------#
+
+options:
+	tag:  &aVillager&bDefense &e>&6
+	graczydorozpoczecia: 1
+
+#------------------------------#
+#          Variables           #
+#------------------------------#
+
+variables:
+	{VD.fala} = 1
+	{VD.kasa.%player%} = 0
+	{VD.gra} = false
+	{VD.iloscgraczy} = 0
+
+#------------------------------#
+#          Dolaczanie          #
+#------------------------------#
+
+on join:
+	if {VD.klasa.%player%} is not set:
+		set {VD.klasa.%player%} to "rycerz"
+		stop
+	if {VD.gra123} is not set:
+		teleport player to {VD.tp.lobby}
+		add player to {VD.gracze::*}
+		set join message to "{@tag} Gracz &a%player% &6dolaczyl do gry &f[%number of all players%/12]"
+		clear player's inventory
+		stop
+
+on quit:
+	set quit message to "{@tag} Gracz &a%player% &6wyszedl z gry &f[%number of all players%/12]"
+	remove player from {VD.gracze::*}
+	stop
+
+#------------------------------#
+#        Sklep - lobby         #
+#------------------------------#
+
+on ping:
+	set {_villagerowie} to number of all villagers
+	if {VD.gra} is true:
+		set motd to "&aVillager&bDefense  &eFala: &5%{VD.fala}%  &eVillagerow: &d%{_villagerowie}% &eZywych: &d%number of {VD.gracze::*}%"
+
+	else:
+		set motd to "&a&lVillager&b&lDefense &e>            &cZbieranie graczy..."
+
+command /sklepreset:
+	trigger:
+		set {VD.sklep.lobby.mieczkamienny.%player%} to "&cnie kupiony!"
+		stop
+
+command /lobbysklep [<text>] [<text>] [<player>]:
+	description: Zakupuje przez gracza wybrany przedmiot.
+	usage: /lobbysklep <item> <gracz>
+	permission: VD.lobby.sklep
+	permission message: Nie masz permisji!
+	executable by: console
+	trigger:
+		if arg 1 is "mieczkamienny":
+			if {VD.sklep.lobby.mieczkamienny.%arg 2%} is not "&akupiony!":
+				if arg-player's balance is greater than 2999:
+					send "{@tag} Wykupiles staly item: &eKamienny Miecz &6za &a3000 &6monet!" to arg 3
+					set {VD.sklep.lobby.mieczkamienny.%arg 3%} to "&akupiony!"
+					execute command "eco take %arg 3% 3000"
+					stop
+				else:
+					send "{@tag} Do kupienia tego przedmiotu potrzeba &e3000 &6kasy!" to arg 3
+					stop
+			else:
+				send "{@tag} Juz wykupiles ten przedmiot!" to arg 3
+
+on rightclick on zombie:
+	if name of entity is "&eRycerz":
+		if {VD.klasa.%player%} is not "rycerz":
+			set {VD.klasa.%player%} to "rycerz"
+			send "{@tag} Wybrales klase &eRycerz&6!"
+			send "&eSet:&a Zelazna klata"
+			send "&eMiecz:&a Drewniany"
+			stop
+		else:
+			send "{@tag} &eRycerz&6 juz jest twoja klasa!"
+			stop
+	if name of entity is "&eWojownik":
+		if {VD.klasa.%player%} is not "wojownik":
+			set {VD.klasa.%player%} to "wojownik"
+			send "{@tag} Wybrales klase &eWojownik&6!"
+			send "&eSet:&a Skorzana klata"
+			send "&eMiecz:&a Kamienny"
+			stop
+		else:
+			send "{@tag} &eWojownik&6 juz jest twoja klasa!"
+			stop
+	if name of entity is "&eLucznik":
+		if {VD.klasa.%player%} is not "lucznik":
+			set {VD.klasa.%player%} to "lucznik"
+			send "{@tag} Wybrales klase &eLucznik&6!"
+			send "&eSet:&c BRAK"
+			send "&eMiecz:&a Drewniany"
+			send "&eDodatkowo:&a Luk i 16 strzal"
+			stop
+		else:
+			send "{@tag} &eLucznik&6 juz jest twoja klasa!"
+			stop
+
+#------------------------------#
+#         Sklep lobby          #
+#------------------------------#
+
+on damage:
+	if victim is zombie:
+		if name of victim is set:
+			cancel event
+			if name of victim is "&eRycerz":
+				show "s;14;i;stone sword;n;&bKamienny miecz &a[&63000&a];l;&eStan: ;c;say %attacker%;" with 6 rows named "&a&lItemki stale" to attacker
+			if name of victim is "&eWojownik":
+				send "{@tag} Wybrales klase &eWojownik&6!" to attacker
+			if name of victim is "&eLucznik":
+				send "{@tag} Wybrales klase &eLucznik&6!" to attacker
+	if attacker is a zombie:
+		if name of attacker is "&eRycerz" or "&eLucznik" or "&eWojownik":
+			cancel event
+	if attacker is not zombie or player:
+		if victim is not player:
+			cancel event
+	if victim is villager:
+		if attacker is player:
+			cancel event
+			stop
+
+#------------------------------#
+#          Start gry           #
+#------------------------------#
+
+every 5 seconds:
+	set {_gracze} to number of all players
+	if {_gracze} is greater than 0:
+		if {VD.fala} is not set:
+			if {VD.gra} is false:
+				if {VD.odlicznie} is false:
+					loop all players:
+						set {VD.odlicznie} to true
+						send "{@tag} Gra rozpocznie sie za 30 sekund!" to all players
+						wait 20 seconds
+						if {_gracze} is greater than {@graczydorozpoczecia} - 1:
+							send "{@tag} Gra rozpocznie sie za 10 sekund!" to all players
+						else:
+							send "{@tag} Za malo graczy!" to all players and console
+							stop
+						wait 5 seconds
+						send "{@tag} Gra rozpocznie sie za 5 sekund!" to all players
+						wait 2 seconds
+						send "{@tag} Gra rozpocznie sie za 3 sekundy!" to all players
+						wait 1 second
+						send "{@tag} Gra rozpocznie sie za 2 sekundy!" to all players
+						wait 1 second
+						send "{@tag} Gra rozpocznie sie za 1 sekunde!" to all players
+						wait 1 second
+						clear loop-player's inventory #'
+						clear {VD.gracze::*}
+						add all players to {VD.gracze::*}
+						if {_gracze} is greater than {@graczydorozpoczecia} - 1:
+							send "{@tag} Gra rozpoczela sie! Nadciaga fala 1!" to all players
+							kill all villagers
+							loop all entities:
+								if type of loop-entity-1 is creature:
+									if name of loop-entity-1 is not set:
+										if type of loop-entity-1 is a zombie:
+											kill loop-entity-1
+							if {VD.klasa.%loop-player%} is "rycerz":
+								set chestplate of loop-player to a iron chestplate
+								give wooden sword to loop-player
+							if {VD.klasa.%loop-player%} is "wojownik":
+								set chestplate of loop-player to a leather chestplate
+								give stone sword to loop-player
+							if {VD.klasa.%loop-player%} is "lucznik":
+								give wooden sword to loop-player
+								give bow of power 5 to loop-player
+								give 16 arrows to loop-player
+							heal all players
+							add 20 to loop-player's hunger bar
+							teleport all players to {VD.tp.gra}
+							spawn 5 villagers at {VD.spawnvillagers}
+							wait 10 seconds
+							set {VD.fala} to 1
+							send "{@tag} 1 fala!" to all players
+							spawn 2 zombies at {VD.spawnzombie.1}
+							spawn 2 zombies at {VD.spawnzombie.2}
+							spawn 2 zombies at {VD.spawnzombie.3}
+							spawn 2 zombies at {VD.spawnzombie.4}
+							set {VD.fala} to 1
+							set {VD.kasa.%loop-player%} to 0
+							set {VD.gra} to true
+							set {VD.odlicznie} to false
+							stop
+						else:
+							send "{@tag} &cZa malo graczy!" to all players
+							set {VD.gra} to false 
+							clear {VD.fala}
+							stop
+
+	if number of {VD.gracze::*} is equal to 0:
+		if {VD.odlicznie} is false:
+			if {VD.gra} is true:
+				heal all players
+				send "{@tag} Gra zostala przegrana po %{VD.fala}% fali!" to all players
+				clear {VD.fala}
+				loop entities:
+					if type of loop-entity-1 is creature:
+						if name of loop-entity-1 is not set:
+							if loop-entity-1 is a zombie:
+								kill loop-entity-1
+				loop all players:
+					set {VD.kasa.%loop-player%} to 0
+				set {VD.gra} to false
+				set {VD.odlicznie} to true
+				wait 10 seconds
+				set {VD.odlicznie} to false
+				teleport all players to {VD.tp.lobby}
+				clear {VD.gracze::*}
+				stop
+	set {_villagerowie} to number of all villagers
+	if {_villagerowie} is 0:
+		if {VD.odlicznie} is false:
+			if {VD.gra} is true:
+				heal all players
+				send "{@tag} Gra zostala przegrana po %{VD.fala}% fali!" to all players
+				clear {VD.fala}
+				loop entities:
+					if type of loop-entity-1 is creature:
+						if name of loop-entity-1 is not set:
+							if loop-entity-1 is a zombie:
+								kill loop-entity-1
+				loop all players:
+					set {VD.kasa.%loop-player%} to 0
+				set {VD.gra} to false
+				set {VD.odlicznie} to true
+				wait 10 seconds
+				set {VD.odlicznie} to false
+				teleport all players to {VD.tp.lobby}
+				clear {VD.gracze::*}
+				stop
+
+every 5 seconds:
+	if number of all players is less than {@graczydorozpoczecia} - 1:
+		if {VD.gra} is false:
+			if {VD.fala} is not set:
+				loop entities:
+					if type of loop-entity-1 is creature:
+						if name of loop-entity-1 is not set:
+							if loop-entity-1 is a zombie:
+								kill loop-entity-1
+								stop
+
+
+on xp spawn:
+	cancel event
+	stop
+
+at 17:00:
+	set time to 7:00
+	stop
+
+every 1 second:
+	loop all players:
+		if loop-player has emerald:
+			add 5 to {VD.kasa.%loop-player%}
+			remove emerald from loop-player's inventory
+	set {_onlineplayers} to number of all players
+	if {_onlineplayers} is 0:
+		clear {VD.gracze::*}
+		set {VD.gra} to false
+		clear {VD.fala}
+		set {VD.odlicznie} to false
+		stop
+	loop all players:
+		if {VD.gra} is true:
+			set {_zombie} to number of zombies
+			set {_villagerowie} to number of villagers
+			set {_gracze} to number of {VD.gracze::*}
+			display board named "&aVillager&bDefense" to loop-player
+			make score "&eZombie:" in board of loop-player to {_zombie}
+			make score "&eVillagerowie:" in board of loop-player to {_villagerowie}
+			make score "&eFala:" in board of loop-player to {VD.fala}
+			make score "&eGracze:" in board of loop-player to {_gracze}
+			make score "&eMonety:" in board of loop-player to {VD.kasa.%loop-player%}
+			move display of loop-player to "sidebar"
+			stop
+		else:
+			set {_money} to loop-player's balance
+			display board named "&aVillager&bDefense" to loop-player
+			make score "&eKasa:" in board of loop-player to {_money}
+			make score "&e" in board of loop-player to 3
+			make score "&eKit:" in board of loop-player to 2
+			make score "&e%{VD.klasa.%loop-player%}%" in board of loop-player to 1
+			move display of loop-player to "sidebar"
+			stop
+	stop
+
+on pick up of emerald:
+	wait 1 tick
+	remove emerald from player's inventory
+	add 5 to {VD.kasa.%player%}
+	stop
+
+on death:
+	if victim is player:
+		clear drops
+		wait 1 second
+		remove victim from {VD.gracze::*}
+		stop
+	if victim is zombie:
+		if attacker is player:
+			clear drops
+			drop 1 emerald at location of attacker
+			stop
+		else:
+			clear drops
+			stop
+
+#FALE!!
+
+every 1 minutes:
+	if {VD.gra} is true:
+		if {VD.fala} is not empty:
+			add 1 to {VD.fala}
+			remove all players from {VD.gracze::*}
+			add all players to {VD.gracze::*}
+			send "{@tag} Rozpoczynam %{VD.fala}% fale!" to all players
+			loop all players:
+				apply regeneration 2 to last spawned entity for 8 seconds
+			if {VD.fala} is 2:
+				spawn 3 zombies at {VD.spawnzombie.1}
+				spawn 3 zombies at {VD.spawnzombie.2}
+				spawn 3 zombies at {VD.spawnzombie.3}
+				spawn 3 zombies at {VD.spawnzombie.4}
+			if {VD.fala} is 3:
+				spawn 4 zombies at {VD.spawnzombie.1}
+				spawn 4 zombies at {VD.spawnzombie.2}
+				spawn 4 zombies at {VD.spawnzombie.3}
+				spawn 4 zombies at {VD.spawnzombie.4}
+			if {VD.fala} is 4:
+				spawn 5 zombies at {VD.spawnzombie.1}
+				spawn 5 zombies at {VD.spawnzombie.2}
+				spawn 5 zombies at {VD.spawnzombie.3}
+				spawn 5 zombies at {VD.spawnzombie.4}
+				stop
+
+on quit:
+	remove player from {VD.gracze::*}
+	stop
+
+
+on rightclick on villager:
+	cancel event
+	stop
+
+on combust:
+	cancel event
+
+#------------------------------#
+#         Komendy adma         #
+#------------------------------#
+
+command /villagerdefense [<text>] [<number>]:
+	permission: VD.commendy
+	aliases: /vd
+	trigger:
+		if arg 1 is "setlobby":
+			set {VD.tp.lobby} to location of player
+			send "{@tag} Ustawiles lobby!"
+			stop
+		if arg 1 is "setgra":
+			set {VD.tp.gra} to location of player
+			send "{@tag} Ustawiles gre!"
+			stop
+		if arg 1 is "spawnzombie":
+			if arg 2 is 1:
+				set {VD.spawnzombie.1} to location of player
+				send "{@tag} Ustawiles spawn zombie nr. %arg 2%!"
+				stop
+			if arg 2 is 2:
+				set {VD.spawnzombie.2} to location of player
+				send "{@tag} Ustawiles spawn zombie nr. %arg 2%!"
+				stop
+			if arg 2 is 3:
+				set {VD.spawnzombie.3} to location of player
+				send "{@tag} Ustawiles spawn zombie nr. %arg 2%!"
+				stop
+			if arg 2 is 4:
+				set {VD.spawnzombie.4} to location of player
+				send "{@tag} Ustawiles spawn zombie nr. %arg 2%!"
+				stop
+		if arg 1 is "spawnvillagers" or "spawnvil":
+			set {VD.spawnvillagers} to location of player
+			send "{@tag} Ustawiles spawn villagerow!"
+			stop
+		if arg 1 is "kit":
+			if arg 2 is 1:
+				spawn a zombie
+				set the name of last spawned entity to "&eRycerz"
+				set chestplate of last spawned entity to a iron chestplate
+				set tool of last spawned entity to a wooden sword
+				apply slowness 100 to last spawned entity for 9999 days
+				apply regeneration 100 to last spawned entity for 9999 days
+				stop
+			if arg 2 is 2:
+				spawn a zombie
+				set the name of last spawned entity to "&eWojownik"
+				set chestplate of last spawned entity to a leather chestplate
+				set tool of last spawned entity to a stone sword
+				apply slowness 100 to last spawned entity for 9999 days
+				apply regeneration 100 to last spawned entity for 9999 days
+				stop
+			if arg 2 is 3:
+				spawn a zombie
+				set the name of last spawned entity to "&eLucznik"
+				set tool of last spawned entity to a bow
+				apply slowness 100 to last spawned entity for 9999 days
+				apply regeneration 100 to last spawned entity for 9999 days
+				stop
+			else:
+				send "{@tag} Kity: 1-4"
+				send "1 - rycerz"
+				send "2 - wojownik"
+				send "3 - lucznik"
+		if arg 1 is not set:
+			send "/vd setlobby or /vd setgra"
+			stop
+
+command /joinreset:
+	permission: VD.joinreset
+	aliases: /jr
+	trigger:
+		clear {VD.gracze::*}
+		stop
+
+command /startreset:
+	permission: VD.startreset
+	trigger:
+		set {VD.gra} to false
+		clear {VD.fala}
+		send "%{VD.gra}% %{VD.fala}%"
+		stop
+
+command /startinfo:
+	permission: VD.startreset
+	trigger:
+		send "%{VD.gra}% %{VD.fala}% %{VD.gracze::*}%"
+		stop
